@@ -1,7 +1,7 @@
 
 #include "utilities.h"
 
-static mode current_mode = IDLE;
+static volatile mode current_mode = IDLE;
 
 void set_mode(mode new_mode)
 {

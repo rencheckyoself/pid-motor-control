@@ -28,10 +28,8 @@ static int normalize_angle(float deg)
 
 int encoder_angle(void)
 {
-  encoder_counts(1);
-
-  float movement =0;
-
+  float movement = 0;
+  encoder_counts();
   movement = encoder_counts() - ENCODER_MID_POINT;
 
   return normalize_angle((movement/384) * 360);

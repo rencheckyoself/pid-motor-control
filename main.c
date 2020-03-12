@@ -1,49 +1,17 @@
 #include <stdio.h>
 #include "NU32.h"          // constants, functions for startup and UART
 
+#include "currentcontrol.h"
 #include "encoder.h"
-#include "utilities.h"
 #include "isense.h"
+#include "utilities.h"
 
 #define BUF_SIZE 200
 
-#define MOTOR_DIR LATEbits.LATE6
-
 // GLOBAL VARIABLES //
-static const int pr5max = 15999;
-static const int pr2max = 3999;
 
-unsigned int adc_sample_convert(int pin);
-unsigned int calc_control(float setpoint, float actual);
+// FUNCTION PROTOTYPES //
 void initialize_peripherals();
-
-void __ISR(_TIMER_5_VECTOR, IPL5SOFT) Controller(void)
-{
-
-  OC1RS = 1000;             // duty cycle = OC1RS/(PR2+1) = 25%
-
-  MOTOR_DIR = !MOTOR_DIR;
-
-  switch (get_mode()) {
-    case IDLE:
-      // brake_mode();
-      break;
-    case PWM:
-      // Set based on f Function
-      break;
-    case ITEST:
-
-      break;
-    case HOLD:
-
-      break;
-    case TRACK:
-
-      break;
-  }
-
-  IFS0bits.T5IF = 0;
-}
 
 int main(void)
 {
@@ -86,6 +54,7 @@ int main(void)
       }
       case 'c': // read the raw encoder value
       {
+        encoder_counts();
         sprintf(buffer, "%d\n", encoder_counts());
         NU32_WriteUART3(buffer);
         break;
@@ -99,6 +68,80 @@ int main(void)
       case 'e': // reset raw encoder value
       {
         encoder_reset();
+        break;
+      }
+      case 'f': // set pwm duty cycle
+      {
+        int n = 0;
+        NU32_ReadUART3(buffer,BUF_SIZE);
+        sscanf(buffer, "%d", &n);
+
+        set_mode(PWM);
+        set_pwm(n); // Set pwm command and direction
+        break;
+      }
+      case 'g': // set current control gains
+      {
+        float kp=0, ki=0;
+        NU32_ReadUART3(buffer,BUF_SIZE);
+        sscanf(buffer, "%f %f", &kp, &ki);
+        set_cc_gains(kp, ki);
+        break;
+      }
+      case 'h': // get current control gains
+      {
+        float cc_gains[2];
+        get_cc_gains(cc_gains);
+
+        sprintf(buffer, "%f \n", cc_gains[0]);
+        NU32_WriteUART3(buffer);
+        sprintf(buffer, "%f \n", cc_gains[1]);
+        NU32_WriteUART3(buffer);
+
+        break;
+      }
+      case 'i': // set current control gains
+      {
+        float kp=0, ki=0;
+        NU32_ReadUART3(buffer,BUF_SIZE);
+        sscanf(buffer, "%f %f", &kp, &ki);
+        set_pos_gains(kp, ki);
+        break;
+      }
+      case 'j': // get current control gains
+      {
+        float pos_gains[2];
+        get_pos_gains(cc_gains);
+
+        sprintf(buffer, "%f \n", pos_gains[0]);
+        NU32_WriteUART3(buffer);
+        sprintf(buffer, "%f \n", pos_gains[1]);
+        NU32_WriteUART3(buffer);
+
+        break;
+      }
+      case 'k': // Test current gains
+      {
+        set_mode(ITEST);
+
+        while(get_mode() != IDLE) { }; // wait for test to finish
+
+        // return data
+        int ref = 0, act = 0;
+
+        int i = 0;
+        for(i = 0; i < 99; i ++)
+        {
+          get_itest_data(&ref, &act, i);
+          sprintf(buffer,"%d %d\n", ref, act);
+          NU32_WriteUART3(buffer);
+        }
+
+        break;
+      }
+      case 'p': // Disable Motor
+      {
+        set_mode(IDLE);
         break;
       }
       case 'q': // quit
@@ -156,33 +199,6 @@ void initialize_peripherals()
   //Initialize ADC
   init_adc();
 
-  // Motor Digital I/O Init
-  TRISEbits.TRISE6 = 0;
-  MOTOR_DIR = 1;
-
-  // 5kHz Timer on Timer 5 for ISR
-  T5CONbits.TCKPS = 0;     // Timer5 prescaler N=1
-  PR5 = pr5max;            // 80Mhz/5kHz = (PR5 + 1)N
-  TMR5 = 0;                // initial TMR5 count is 0
-
-  // Generate 20kHz PWM Signal
-  // Timer 2 Init
-  T2CONbits.TCKPS = 0;    // Timer2 prescaller N=1
-  PR2 = pr2max;            // 80Mhz/20kHz = (PR2 + 1)N
-  TMR2 = 0;                // initial TMR2 count is 0
-
-  // Output Compare Init
-  OC2CONbits.OCM = 0b110;  // PWM mode without fault pin; other OC1CON bits are defaults
-  OC2CONbits.OCTSEL = 0;   // Select timer 2
-  OC1RS = 1000;             // duty cycle = OC1RS/(PR2+1) = 25%
-  OC1R = 1000;              // initialize before turning OC1 on; afterward it is read-only
-
-  // Turn on Peripherals
-  T2CONbits.ON = 1;        // turn on Timer2
-  T5CONbits.ON = 1;        // turn on Timer5
-
-  // Set 5kHz Interrupt
-  IPC5bits.T5IP = 5;              // INT step 4: priority for Timer5
-  IFS0bits.T5IF = 0;              // INT step 5: clear interrupt flag
-  IEC0bits.T5IE = 1;              // INT step 6: enable interrupt
+  // Initialise all current control Peripherals
+  init_curcont();
 }

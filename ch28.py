@@ -3,7 +3,7 @@
 # sudo apt-get install python3-pip
 # python3 -m pip install pyserial
 # sudo apt-get install python3-matplotlib
-
+import matplotlib.pyplot as plt
 import serial
 ser = serial.Serial('/dev/ttyUSB0',230400,rtscts=1)
 print('Opening port: ')
@@ -14,7 +14,15 @@ has_quit = False
 while not has_quit:
     print('PIC32 MOTOR DRIVER INTERFACE')
     # display the menu options; this list will grow
-    print('\na: Read current sensor (raw) \nb: Read current sensor (mA) \nc: Read encoder (raw) \nd: read encoder (deg) \ne: reset encoder value \nq: Quit \nr: Get mode') # '\t' is a tab
+    print('\na: Read current sensor (raw) \t\tb: Read current sensor (mA)\
+           \nc: Read encoder (raw)        \t\td: read encoder (deg) \
+           \ne: reset encoder value       \t\tf: Set PWM \
+           \ng: Set currnet gains         \t\th: Get current gains \
+           \ni: Set position gains        \t\tj: Get position gains \
+           \nk: Test current control      \t\tl: Go to anlge (deg) \
+           \nm: Load step trajectory      \t\tn: Load qubic trajectory \
+           \no: Execute trajectory:       \t\tp: Disable the motor \
+           \nq: Exit                      \t\tr: Get mode')
     # read the user's choice
     selection = input('\nENTER COMMAND: ')
     selection_endline = selection+'\n'
@@ -39,13 +47,80 @@ while not has_quit:
         n_int = int(n_str)
         print('Encoder Count: ' + str(n_int) + '\n') # print it to the screen
 
-    elif (selection == 'e'): # reset the raw encoder value
-        print("Encoder has been reset to 32,768")
-
     elif (selection == 'd'): # read the raw encoder value
         n_str = ser.read_until(b'\n');
         n_int = int(n_str)
         print('Encoder Degrees: ' + str(n_int) + '\n') # print it to the screen
+
+    elif (selection == 'e'): # reset the raw encoder value
+        print("Encoder has been reset to 32,768")
+
+    elif (selection == 'f'): # Set PWM command
+        n_str = input('Set PWM -100 to 100: ') # get the number to send
+        print('Send PWM Command: ' + n_str) # print it to the screen to double check
+
+        ser.write((n_str + '\n').encode())
+
+    elif (selection == 'g'): # set current gains
+        n_str1 = input('Current Cnt. Kp: ') # get the number to send
+        n_str2 = input('Current Cnt. Ki: ') # get the number to send
+
+        print("Sending gains, Kp = " + n_str1 + ", Ki = " + n_str2)
+
+        ser.write((n_str1 + ' ' + n_str2 + '\n').encode())
+
+    elif (selection == 'h'): # Get current gains
+        n_str1 = ser.read_until(b'\n');
+        n_str2 = ser.read_until(b'\n');
+
+        n_f1 = float(n_str1)
+        n_f2 = float(n_str2)
+
+        print("Current gains, Kp = " + str(n_f1) + ", Ki = " + str(n_f2))
+
+    elif (selection == 'i'): # Set position gains
+        n_str1 = input('Position Cnt. Kp: ') # get the number to send
+        n_str2 = input('Position Cnt. Ki: ') # get the number to send
+
+        print("Sending gains, Kp = " + n_str1 + ", Ki = " + n_str2)
+
+        ser.write((n_str1 + ' ' + n_str2 + '\n').encode())
+
+    elif (selection == 'j'): # Get position gains
+        n_str1 = ser.read_until(b'\n');
+        n_str2 = ser.read_until(b'\n');
+
+        n_f1 = float(n_str1)
+        n_f2 = float(n_str2)
+
+        print("Position gains, Kp = " + str(n_f1) + ", Ki = " + str(n_f2))
+
+    elif (selection == 'k'): # Current gains testing
+
+        sampnum = 0
+        read_samples = 10
+        act = []
+        ref = []
+
+        while sampnum < 99:
+            data_read = ser.read_until(b'\n', 50)
+            data_text = str(data_read, 'utf-8')
+            data = list(map(int, data_text.split()))
+
+            if(len(data) == 2):
+                act.append(data[0])
+                ref.append(data[1])
+                sampnum = sampnum + 1
+
+        t = range(len(act)) # time array
+        plt.plot(t,act,'r*-',t,ref,'b*-')
+        plt.ylabel('Current (mA)')
+        plt.xlabel('Sample #')
+        plt.title('Kp: ' + n_str1 + ', Ki: ' + n_str2)
+        plt.show()
+
+    elif (selection == 'p'): # disable motor
+        print("Disabling Motor...")
 
     elif (selection == 'q'):
         print('Exiting client')
