@@ -102,20 +102,22 @@ int main(void)
       }
       case 'i': // set current control gains
       {
-        float kp=0, ki=0;
+        float kp=0, ki=0, kd=0;
         NU32_ReadUART3(buffer,BUF_SIZE);
-        sscanf(buffer, "%f %f", &kp, &ki);
-        set_pos_gains(kp, ki);
+        sscanf(buffer, "%f %f %f", &kp, &ki, &kd);
+        set_pos_gains(kp, ki, kd);
         break;
       }
       case 'j': // get current control gains
       {
-        float pos_gains[2];
-        get_pos_gains(cc_gains);
+        float pos_gains[3];
+        get_pos_gains(pos_gains);
 
         sprintf(buffer, "%f \n", pos_gains[0]);
         NU32_WriteUART3(buffer);
         sprintf(buffer, "%f \n", pos_gains[1]);
+        NU32_WriteUART3(buffer);
+        sprintf(buffer, "%f \n", pos_gains[2]);
         NU32_WriteUART3(buffer);
 
         break;
@@ -136,6 +138,18 @@ int main(void)
           sprintf(buffer,"%d %d\n", ref, act);
           NU32_WriteUART3(buffer);
         }
+
+        break;
+      }
+      case 'l': // Go to anlge
+      {
+        int deg = 0;
+        NU32_ReadUART3(buffer,BUF_SIZE);
+        sscanf(buffer, "%d", &deg);
+
+        set_holding_position(deg);
+        set_mode(HOLD);
+
 
         break;
       }
@@ -201,4 +215,7 @@ void initialize_peripherals()
 
   // Initialise all current control Peripherals
   init_curcont();
+
+  // Initialise all position control Peripherals
+  init_poscont();
 }

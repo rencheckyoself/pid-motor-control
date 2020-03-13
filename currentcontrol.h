@@ -3,6 +3,9 @@
 
 #define MOTOR_DIR LATEbits.LATE6
 
+// Set the holding position current setpoint
+void set_hold_setpoint(int sp);
+
 // Set the pwm duty cycle
 void set_pwm(int pwm);
 

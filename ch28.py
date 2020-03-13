@@ -81,19 +81,22 @@ while not has_quit:
     elif (selection == 'i'): # Set position gains
         n_str1 = input('Position Cnt. Kp: ') # get the number to send
         n_str2 = input('Position Cnt. Ki: ') # get the number to send
+        n_str3 = input('Position Cnt. Kd: ') # get the number to send
 
-        print("Sending gains, Kp = " + n_str1 + ", Ki = " + n_str2)
+        print("Sending gains, Kp = " + n_str1 + ", Ki = " + n_str2 + " Kd = " + n_str3)
 
-        ser.write((n_str1 + ' ' + n_str2 + '\n').encode())
+        ser.write((n_str1 + ' ' + n_str2 + ' ' + n_str3 + '\n').encode())
 
     elif (selection == 'j'): # Get position gains
         n_str1 = ser.read_until(b'\n');
         n_str2 = ser.read_until(b'\n');
+        n_str3 = ser.read_until(b'\n');
 
         n_f1 = float(n_str1)
         n_f2 = float(n_str2)
+        n_f3 = float(n_str3)
 
-        print("Position gains, Kp = " + str(n_f1) + ", Ki = " + str(n_f2))
+        print("Position gains, Kp = " + str(n_f1) + ", Ki = " + str(n_f2) + ", Kd = " + str(n_f3))
 
     elif (selection == 'k'): # Current gains testing
 
@@ -118,6 +121,10 @@ while not has_quit:
         plt.xlabel('Sample #')
         plt.title('Kp: ' + n_str1 + ', Ki: ' + n_str2)
         plt.show()
+
+    elif (selection == 'l'):
+        n_str1 = input('Enter an angle (0-360): ') # get the number to send
+        ser.write((n_str1 + '\n').encode())
 
     elif (selection == 'p'): # disable motor
         print("Disabling Motor...")

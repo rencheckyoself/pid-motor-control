@@ -11,10 +11,11 @@ static volatile int current_direction = 0;
 static volatile float gains[2] = {0,0};
 
 static volatile int itest_cnt = 0, itest_sp = 200;
-
 static volatile float itest_eint = 0;
-
 static volatile int itest_ref[100], itest_act[100];
+
+static volatile int hold_sp = 0;
+static volatile float hold_eint = 0;
 
 static void brake_mode()
 {
@@ -47,7 +48,7 @@ static void issue_pwm()
   MOTOR_DIR = current_direction;
 }
 
-static float calc_control(float setpoint, float actual)
+static float itest_calc_control(float setpoint, float actual)
 {
   float u = 0; // Calculated Control
   float error = setpoint - actual;
@@ -55,6 +56,21 @@ static float calc_control(float setpoint, float actual)
   itest_eint += error; // dt is factored into Ki
 
   u = gains[0]*error + gains[1]*itest_eint;
+
+  if(u > 100) u = 100;
+  if(u < -100) u = -100;
+
+  return u;
+}
+
+static float hold_calc_control(float setpoint, float actual)
+{
+  float u = 0; // Calculated Control
+  float error = setpoint - actual;
+
+  hold_eint += error; // dt is factored into Ki
+
+  u = gains[0]*error + gains[1]*hold_eint;
 
   if(u > 100) u = 100;
   if(u < -100) u = -100;
@@ -78,6 +94,11 @@ void get_itest_data(int *ref_val, int *act_val, int index)
 {
   *ref_val = itest_ref[index];
   *act_val = itest_act[index];
+}
+
+void set_hold_setpoint(int sp)
+{
+  hold_sp = sp;
 }
 
 void __ISR(_TIMER_5_VECTOR, IPL5SOFT) Controller(void)
@@ -138,19 +159,25 @@ void __ISR(_TIMER_5_VECTOR, IPL5SOFT) Controller(void)
       }
 
       // Calculate Control
-      int pwm_cmd = calc_control(itest_sp, cur_val);
+      int pwm_cmd = itest_calc_control(itest_sp, cur_val);
 
       set_pwm(pwm_cmd);
       issue_pwm();
 
       itest_ref[itest_cnt] = itest_sp;
       itest_act[itest_cnt] = cur_val;
-
-
       break;
     }
     case HOLD:
     {
+      int cur_val = read_adc_ma(15);
+
+      // Calculate Control
+      int pwm_cmd = hold_calc_control(hold_sp, cur_val);
+
+      set_pwm(pwm_cmd);
+      issue_pwm();
+
       break;
     }
     case TRACK:
@@ -161,7 +188,6 @@ void __ISR(_TIMER_5_VECTOR, IPL5SOFT) Controller(void)
 
   IFS0bits.T5IF = 0;
 }
-
 
 void init_curcont()
 {
