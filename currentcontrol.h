@@ -6,6 +6,9 @@
 // Set the holding position current setpoint
 void set_hold_setpoint(int sp);
 
+// Set the track position current setpoint
+void set_track_setpoint(int sp);
+
 // Set the pwm duty cycle
 void set_pwm(int pwm);
 

@@ -6,9 +6,8 @@
 #include "isense.h"
 #include "utilities.h"
 
-#define BUF_SIZE 200
-
 // GLOBAL VARIABLES //
+static int traj_size = 0;
 
 // FUNCTION PROTOTYPES //
 void initialize_peripherals();
@@ -160,17 +159,61 @@ int main(void)
       }
       case 'm': // load trajectory
       {
+        // read in size of array
+        NU32_ReadUART3(buffer,BUF_SIZE);
+        sscanf(buffer, "%d", &traj_size);
+
+        // read each individual value in and place it in position
+        int i = 0;
+        float traj[BUF_SIZE];
+
+        for(i = 0; i < traj_size; i++)
+        {
+          NU32_ReadUART3(buffer,BUF_SIZE);
+          sscanf(buffer, "%d", traj+i);
+        }
+
+        // copy the area into the position control variable
+        set_ref_traj(&traj, traj_size);
 
         break;
       }
       case 'n': // load trajectory
       {
+        // read in size of array
+        NU32_ReadUART3(buffer,BUF_SIZE);
+        sscanf(buffer, "%d", &traj_size);
+
+        // read each individual value in and place it in position
+        int i = 0;
+        float traj[BUF_SIZE];
+
+        for(i = 0; i < traj_size; i++)
+        {
+          NU32_ReadUART3(buffer,BUF_SIZE);
+          sscanf(buffer, "%d", traj+i);
+        }
+
+        // copy the area into the position control variable
+        set_ref_traj(&traj, traj_size);
 
         break;
       }
       case 'o': // execute trajectory
       {
+        set_mode(TRACK);
 
+        while(get_mode() != IDLE) { }; // wait to finish trajectory
+
+        // return position data
+        int i = 0;
+        int act = 0;
+        for(i = 0; i < traj_size; i++)
+        {
+          act = get_traj_val(i);
+          sprintf(buffer,"%d\n", act);
+          NU32_WriteUART3(buffer);
+        }
         break;
       }
       case 'p': // Disable Motor

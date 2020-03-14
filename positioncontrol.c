@@ -8,11 +8,18 @@
 
 static volatile float gains[3] = {10, 0.0002, 500};
 static const pr4max = 49999;
+static const max_current = 762;
+
 static volatile float hold_eint = 0;
 static volatile float hold_eprev = 0;
 static volatile int hold_sp = 0;
 
-static volatile int ref_traj[200];
+static volatile int traj_pos = 0;
+static volatile int traj_size = 0;
+static volatile int ref_traj[BUF_SIZE];
+static volatile int act_traj[BUF_SIZE];
+static volatile float track_eint = 0;
+static volatile float track_eprev = 0;
 
 static int hold_calc_control(float setpoint, float actual)
 {
@@ -26,19 +33,47 @@ static int hold_calc_control(float setpoint, float actual)
 
   u = gains[0]*error + gains[1]*hold_eint + gains[2]*derror;
 
-  if(u > 762) u = 762;
-  if(u < -762) u = -762;
+  if(u > max_current) u = max_current;
+  if(u < -max_current) u = -max_current;
 
   return u;
 }
 
-void set_ref_traj(int* traj)
+static int track_calc_control(float setpoint, float actual)
+{
+  int u = 0; // Calculated current Control in mA
+  float error = setpoint - actual;
+
+  track_eint += error; // dt is factored into Ki
+  float derror = error - track_eprev;
+
+  track_eprev = error;
+
+  u = gains[0]*error + gains[1]*hold_eint + gains[2]*derror;
+
+  if(u > max_current) u = max_current;
+  if(u < -max_current) u = -max_current;
+
+  return u;
+}
+
+// return a value of the actual trajectory
+int get_traj_val(int index)
+{
+  return act_traj[index];
+}
+
+void set_ref_traj(float *traj, int traj_len)
 {
   int i = 0;
-  for(i = 0; i < (sizeof(traj)/sizeof(traj[0])); i++)
+
+  traj_size = traj_len;
+
+  for(i = 0; i < traj_len; i++)
   {
-    ref_traj[i] = traj[i]
+    ref_traj[i] = traj[i];
   }
+
 }
 
 void set_holding_position(int deg)
@@ -62,7 +97,8 @@ void get_pos_gains(float* gain_arr)
 
 void __ISR(_TIMER_4_VECTOR, IPL6SOFT) PositionController(void)
 {
-  switch (get_mode()) {
+  switch (get_mode())
+  {
     case HOLD:
     {
       // get current position
@@ -78,7 +114,28 @@ void __ISR(_TIMER_4_VECTOR, IPL6SOFT) PositionController(void)
     }
     case TRACK:
     {
+      if(traj_pos < traj_size)
+      {
+        // get current position
+        int act_pos = encoder_angle();
 
+        // Calculate control
+        int cur_sp = track_calc_control(ref_traj[traj_pos], act_pos);
+
+        // set current setpoint
+        set_track_setpoint(cur_sp);
+
+        act_traj[traj_pos] = act_pos;
+
+        traj_pos++;
+      }
+      else
+      {
+        set_mode(IDLE);
+        traj_pos = 0;
+        track_eint = 0;
+        track_eprev = 0;
+      }
       break;
     }
   }

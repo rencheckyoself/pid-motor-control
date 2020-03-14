@@ -133,13 +133,13 @@ while not has_quit:
         ser.write((n_str1 + '\n').encode())
 
     elif (selection == 'm'): # load trajectory
-        n_str = input('Input Trajectory [<deg>, <seconds>, ...]: ') # get the number to send
+        n_str = input('Input Trajectory [<deg>, <seconds>, ...]: ') # get the numbers to send
 
     elif (selection == 'n'): # load cubic trajectory
-        n_str = input('Input Trajectory [<deg>, <seconds>, ...]: ') # get the number to send
+        n_str = input('Input Trajectory [<deg>, <seconds>, ...]: ') # get the numbers to send
 
     elif (selection == 'o'):
-
+        pass
 
     elif (selection == 'p'): # disable motor
         print("Disabling Motor...")
