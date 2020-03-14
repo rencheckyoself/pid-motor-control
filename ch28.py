@@ -17,7 +17,7 @@ while not has_quit:
     print('\na: Read current sensor (raw) \t\tb: Read current sensor (mA)\
            \nc: Read encoder (raw)        \t\td: read encoder (deg) \
            \ne: reset encoder value       \t\tf: Set PWM \
-           \ng: Set currnet gains         \t\th: Get current gains \
+           \ng: Set current gains         \t\th: Get current gains \
            \ni: Set position gains        \t\tj: Get position gains \
            \nk: Test current control      \t\tl: Go to anlge (deg) \
            \nm: Load step trajectory      \t\tn: Load qubic trajectory \
@@ -83,7 +83,7 @@ while not has_quit:
         n_str2 = input('Position Cnt. Ki: ') # get the number to send
         n_str3 = input('Position Cnt. Kd: ') # get the number to send
 
-        print("Sending gains, Kp = " + n_str1 + ", Ki = " + n_str2 + " Kd = " + n_str3)
+        print("Sending gains, Kp = " + n_str1 + ", Ki = " + n_str2 + ", Kd = " + n_str3)
 
         ser.write((n_str1 + ' ' + n_str2 + ' ' + n_str3 + '\n').encode())
 
@@ -115,16 +115,31 @@ while not has_quit:
                 ref.append(data[1])
                 sampnum = sampnum + 1
 
+        n_str1 = ser.read_until(b'\n');
+        n_str2 = ser.read_until(b'\n');
+
+        n_f1 = float(n_str1)
+        n_f2 = float(n_str2)
+
         t = range(len(act)) # time array
         plt.plot(t,act,'r*-',t,ref,'b*-')
         plt.ylabel('Current (mA)')
         plt.xlabel('Sample #')
-        plt.title('Kp: ' + n_str1 + ', Ki: ' + n_str2)
+        plt.title('Kp: ' + str(n_f1) + ', Ki: ' + str(n_f2))
         plt.show()
 
     elif (selection == 'l'):
         n_str1 = input('Enter an angle (0-360): ') # get the number to send
         ser.write((n_str1 + '\n').encode())
+
+    elif (selection == 'm'): # load trajectory
+        n_str = input('Input Trajectory [<deg>, <seconds>, ...]: ') # get the number to send
+
+    elif (selection == 'n'): # load cubic trajectory
+        n_str = input('Input Trajectory [<deg>, <seconds>, ...]: ') # get the number to send
+
+    elif (selection == 'o'):
+
 
     elif (selection == 'p'): # disable motor
         print("Disabling Motor...")

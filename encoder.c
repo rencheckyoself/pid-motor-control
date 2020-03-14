@@ -32,11 +32,13 @@ int encoder_angle(void)
   encoder_counts();
   movement = encoder_counts() - ENCODER_MID_POINT;
 
-  return normalize_angle((movement/384) * 360);
+  return (movement/384) * 360;
 }
 
 
 int encoder_counts(void) {
+
+  encoder_command(1);
   return encoder_command(1);
 }
 

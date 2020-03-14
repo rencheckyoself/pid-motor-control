@@ -54,7 +54,6 @@ int main(void)
       }
       case 'c': // read the raw encoder value
       {
-        encoder_counts();
         sprintf(buffer, "%d\n", encoder_counts());
         NU32_WriteUART3(buffer);
         break;
@@ -139,6 +138,13 @@ int main(void)
           NU32_WriteUART3(buffer);
         }
 
+        float cc_gains[2];
+        get_cc_gains(cc_gains);
+        sprintf(buffer, "%f \n", cc_gains[0]);
+        NU32_WriteUART3(buffer);
+        sprintf(buffer, "%f \n", cc_gains[1]);
+        NU32_WriteUART3(buffer);
+
         break;
       }
       case 'l': // Go to anlge
@@ -150,6 +156,20 @@ int main(void)
         set_holding_position(deg);
         set_mode(HOLD);
 
+        break;
+      }
+      case 'm': // load trajectory
+      {
+
+        break;
+      }
+      case 'n': // load trajectory
+      {
+
+        break;
+      }
+      case 'o': // execute trajectory
+      {
 
         break;
       }

@@ -1,28 +1,44 @@
+#include <string.h>
+
 #include "NU32.h"
 #include "encoder.h"
 #include "currentcontrol.h"
 #include "positioncontrol.h"
 #include "utilities.h"
 
-static volatile float gains[3] = {0,0,0};
+static volatile float gains[3] = {10, 0.0002, 500};
 static const pr4max = 49999;
 static volatile float hold_eint = 0;
-
+static volatile float hold_eprev = 0;
 static volatile int hold_sp = 0;
 
-static float hold_calc_control(float setpoint, float actual)
+static volatile int ref_traj[200];
+
+static int hold_calc_control(float setpoint, float actual)
 {
-  float u = 0; // Calculated Control
+  int u = 0; // Calculated current Control in mA
   float error = setpoint - actual;
 
   hold_eint += error; // dt is factored into Ki
+  float derror = error - hold_eprev;
 
-  u = gains[0]*error + gains[1]*hold_eint;
+  hold_eprev = error;
 
-  if(u > 100) u = 100;
-  if(u < -100) u = -100;
+  u = gains[0]*error + gains[1]*hold_eint + gains[2]*derror;
+
+  if(u > 762) u = 762;
+  if(u < -762) u = -762;
 
   return u;
+}
+
+void set_ref_traj(int* traj)
+{
+  int i = 0;
+  for(i = 0; i < (sizeof(traj)/sizeof(traj[0])); i++)
+  {
+    ref_traj[i] = traj[i]
+  }
 }
 
 void set_holding_position(int deg)
@@ -60,10 +76,14 @@ void __ISR(_TIMER_4_VECTOR, IPL6SOFT) PositionController(void)
 
       break;
     }
+    case TRACK:
+    {
+
+      break;
+    }
   }
 
   IFS0bits.T4IF = 0;
-
 }
 
 void init_poscont()

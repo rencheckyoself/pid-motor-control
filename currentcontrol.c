@@ -8,7 +8,7 @@ static const int pr2max = 3999;
 static volatile int current_duty_cycle = 0;
 static volatile int current_direction = 0;
 
-static volatile float gains[2] = {0,0};
+static volatile float gains[2] = {0.35,0.07};
 
 static volatile int itest_cnt = 0, itest_sp = 200;
 static volatile float itest_eint = 0;
@@ -16,6 +16,9 @@ static volatile int itest_ref[100], itest_act[100];
 
 static volatile int hold_sp = 0;
 static volatile float hold_eint = 0;
+
+static volatile int track_sp = 0;
+static volatile float track_eint = 0;
 
 static void brake_mode()
 {
@@ -78,6 +81,21 @@ static float hold_calc_control(float setpoint, float actual)
   return u;
 }
 
+static float track_calc_control(float setpoint, float actual)
+{
+  float u = 0; // Calculated Control
+  float error = setpoint - actual;
+
+  track_eint += error; // dt is factored into Ki
+
+  u = gains[0]*error + gains[1]*track_eint;
+
+  if(u > 100) u = 100;
+  if(u < -100) u = -100;
+
+  return u;
+}
+
 void set_cc_gains(float kp_new, float ki_new)
 {
   gains[0] = kp_new;
@@ -99,6 +117,11 @@ void get_itest_data(int *ref_val, int *act_val, int index)
 void set_hold_setpoint(int sp)
 {
   hold_sp = sp;
+}
+
+void set_track_setpoint(int sp)
+{
+  track_sp = sp;
 }
 
 void __ISR(_TIMER_5_VECTOR, IPL5SOFT) Controller(void)
@@ -182,6 +205,13 @@ void __ISR(_TIMER_5_VECTOR, IPL5SOFT) Controller(void)
     }
     case TRACK:
     {
+      int cur_val = read_adc_ma(15);
+
+      // Calculate Control
+      int pwm_cmd = track_calc_control(track_sp, cur_val);
+
+      set_pwm(pwm_cmd);
+      issue_pwm();
       break;
     }
   }
